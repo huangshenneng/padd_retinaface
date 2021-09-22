@@ -14,14 +14,14 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 
 直接运行train.py 文件
 
-## 模型的测试
+# 模型的测试
 ```
 1.运行 test_widerface.py 
 2. cd ./widerface_evaluate
     python evaluation.py
 ```
 
-# 模型训练结果 （因为显卡资源紧张，目前只训练了13个epoch，效果不是很理想，后期训练好了再继续提交）
+## 模型训练结果 （因为显卡资源紧张，目前只训练了13个epoch，效果不是很理想，后期训练好了再继续提交）
 Easy   Val AP: 0.48140963223995936
 Medium Val AP: 0.5141806493221557
 Hard   Val AP: 0.3101786747705212
