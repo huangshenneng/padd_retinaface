@@ -30,9 +30,7 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 
 ## 模型训练结果 （因为显卡资源紧张，目前只训练了13个epoch，效果不是很理想，后期训练好了再继续提交）
 ```
-Easy   Val AP: 0.48140963223995936 
-Medium Val AP: 0.5141806493221557  
-Hard   Val AP: 0.3101786747705212
+
 ```
 
 参考
