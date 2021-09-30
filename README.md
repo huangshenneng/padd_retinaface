@@ -10,12 +10,11 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 3. 下载验证集的结果，解压到 ' data/widerface'文件夹下，用于测试mAP
 4.下载模型
 ```
+### 模型文件
+[baidu cloud](https://pan.baidu.com/s/1R2_8zGfjQ63e0BmC_aWwhw ) Password: 0ewb
 
-模型链接（训练13epoch）
-[baidu cloud](https://pan.baidu.com/s/1s6po5aQzQMRLzpmBlq-rfA) Password: wihg
-
-验证集预测结果
-[baidu cloud](https://pan.baidu.com/s/1p5ffgic8-L_BXd8LawAYSQ)  Password: rm8s  
+### 训练log
+[baidu cloud](https://pan.baidu.com/s/1cNa2d9HNvOXdhlbYPZZtnw  ) Password: ypry
 
 # 模型的训练
 
@@ -23,14 +22,16 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 
 # 模型的测试
 ```
-1.运行 test_widerface.py 
+1.运行 test_widerface.py  
 2. cd ./widerface_evaluate
     python evaluation.py
 ```
 
-## 模型训练结果 （因为显卡资源紧张，目前只训练了13个epoch，效果不是很理想，后期训练好了再继续提交）
+## 模型训练结果 
 ```
-
+Easy   Val AP: 0.9402364106525578
+Medium Val AP: 0.9208495951285756
+Hard   Val AP: 0.8005163465688859
 ```
 
 参考
