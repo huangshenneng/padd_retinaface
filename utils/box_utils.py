@@ -1,6 +1,6 @@
 import paddle
 import numpy as np
-import torch
+
 
 def point_form(boxes):
     """ Convert prior_boxes to (xmin, ymin, xmax, ymax)
@@ -133,16 +133,24 @@ def match(threshold, truths, priors, variances, labels, landms, loc_t, conf_t, l
     # print('best_prior_overlap  ',best_prior_overlap)
     # print('best_prior_idx  ',best_prior_idx)
 
+    # import sys
+    # sys.exit()
     # ignore hard gt
-    # 转成numpy格式
-    best_prior_overlap=best_prior_overlap.numpy()
-    valid_gt_idx = best_prior_overlap[:, 0] >= 0.2
-    best_prior_idx=best_prior_idx.numpy()
-    best_prior_idx_filter = best_prior_idx[valid_gt_idx, :]
+    valid_gt_idx = paddle.greater_than(best_prior_overlap,paddle.ones_like(best_prior_overlap)*0.2)
+    best_prior_idx_filter = paddle.masked_select(best_prior_idx,valid_gt_idx)
 
-    best_prior_idx_filter=paddle.to_tensor(best_prior_idx_filter)
-    best_prior_idx=paddle.to_tensor(best_prior_idx)
+
+    # 转成numpy格式
+    # best_prior_overlap_np=best_prior_overlap.numpy()
+    # valid_gt_idx = best_prior_overlap_np[:, 0] >= 0.2
+    # best_prior_idx_np=best_prior_idx.numpy()
+    # best_prior_idx_filter = best_prior_idx_np[valid_gt_idx, :]
+
+    # best_prior_idx_filter=paddle.to_tensor(best_prior_idx_filter)
+    # best_prior_idx=paddle.to_tensor(best_prior_idx)
     if best_prior_idx_filter.shape[0] <= 0:
+        del best_prior_idx_filter
+        del best_prior_idx
         loc_t[idx] = 0
         conf_t[idx] = 0
         return
@@ -151,41 +159,47 @@ def match(threshold, truths, priors, variances, labels, landms, loc_t, conf_t, l
 
     # [1,num_priors] best ground truth for each prior
     best_truth_overlap = paddle.max(overlaps, axis=0, keepdim=True)
-    best_truth_idx = paddle.argmax(overlaps, axis=0, keepdim=True).astype('int64')
+    best_truth_idx = paddle.argmax(overlaps, axis=0, keepdim=True).astype('int64')  # 'float32' int64
 
     best_truth_idx=paddle.squeeze(best_truth_idx,axis=0)
     best_truth_overlap=paddle.squeeze(best_truth_overlap,axis=0)
     best_prior_idx=paddle.squeeze(best_prior_idx,axis=1)
-    # best_prior_idx_filter=paddle.squeeze(best_prior_idx_filter,axis=1)
-    best_prior_idx_filter=paddle.squeeze(best_prior_idx_filter,axis=1)
-    # best_prior_overlap=paddle.squeeze(best_prior_overlap,axis=1)
 
-    # best_truth_idx.squeeze_(0)
-    # best_truth_overlap.squeeze_(0)
-    # best_prior_idx.squeeze_(1)
-    # best_prior_idx_filter.squeeze_(1)
-    # best_prior_overlap.squeeze_(1)
+    # print()
+    # best_prior_idx_filter=paddle.squeeze(best_prior_idx_filter,axis=1)
+
 
     # best_truth_overlap.index_fill_(0, best_prior_idx_filter, 2)  # ensure best prior
-
-    # best_truth_overlap[best_prior_idx_filter]=2  # ensure best prior
-    for i in range(best_prior_idx_filter.shape[0]):
-        best_truth_overlap[i] = 2
+    for index in  best_prior_idx_filter:
+        index=index.numpy()
+        best_truth_overlap[index] = 2.
 
     # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     for j in range(best_prior_idx.shape[0]):     # 判别此anchor是预测哪一个boxes
-        best_truth_idx[best_prior_idx[j]] = j
+        index2=best_prior_idx[j].numpy()
+        best_truth_idx[index2] = j
     matches = truths[best_truth_idx]            # Shape: [num_priors,4] 此处为每一个anchor对应的bbox取出来
     conf = labels[best_truth_idx]               # Shape: [num_priors]      此处为每一个anchor对应的label取出来
+
+
     conf[best_truth_overlap < threshold] = 0    # label as background   overlap<0.35的全部作为负样本
     loc = encode(matches, priors, variances)
+
+    # conf_np = conf.cpu().numpy()
+    # a, b = np.unique(conf_np, return_counts=True)
+    # print('a ,b',(a,b))
 
     matches_landm = landms[best_truth_idx]
     landm = encode_landm(matches_landm, priors, variances)
     loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
     conf_t[idx] = conf  # [num_priors] top class label for each prior
     landm_t[idx] = landm
+
+    del best_prior_overlap
+    del best_prior_idx
+    del best_prior_idx_filter
+    del best_truth_idx
 
 
 def encode(matched, priors, variances):
@@ -305,73 +319,7 @@ def log_sum_exp(x):
     return paddle.log(paddle.sum(paddle.exp(x-x_max), 1, keepdim=True)) + x_max
 
 
-# Original author: Francisco Massa:
-# https://github.com/fmassa/object-detection.torch
-# Ported to PyTorch by Max deGroot (02/01/2017)
-def nms(boxes, scores, overlap=0.5, top_k=200):
-    """Apply non-maximum suppression at test time to avoid detecting too many
-    overlapping bounding boxes for a given object.
-    Args:
-        boxes: (tensor) The location preds for the img, Shape: [num_priors,4].
-        scores: (tensor) The class predscores for the img, Shape:[num_priors].
-        overlap: (float) The overlap thresh for suppressing unnecessary boxes.
-        top_k: (int) The Maximum number of box preds to consider.
-    Return:
-        The indices of the kept boxes with respect to num_priors.
-    """
 
-    keep = torch.Tensor(scores.size(0)).fill_(0).long()
-    if boxes.numel() == 0:
-        return keep
-    x1 = boxes[:, 0]
-    y1 = boxes[:, 1]
-    x2 = boxes[:, 2]
-    y2 = boxes[:, 3]
-    area = paddle.mul(x2 - x1, y2 - y1)
-    v, idx = scores.sort(0)  # sort in ascending order
-    # I = I[v >= 0.01]
-    idx = idx[-top_k:]  # indices of the top-k largest vals
-    xx1 = boxes.new()
-    yy1 = boxes.new()
-    xx2 = boxes.new()
-    yy2 = boxes.new()
-    w = boxes.new()
-    h = boxes.new()
 
-    # keep = torch.Tensor()
-    count = 0
-    while idx.numel() > 0:
-        i = idx[-1]  # index of current largest val
-        # keep.append(i)
-        keep[count] = i
-        count += 1
-        if idx.size(0) == 1:
-            break
-        idx = idx[:-1]  # remove kept element from view
-        # load bboxes of next highest vals
-        torch.index_select(x1, 0, idx, out=xx1)
-        torch.index_select(y1, 0, idx, out=yy1)
-        torch.index_select(x2, 0, idx, out=xx2)
-        torch.index_select(y2, 0, idx, out=yy2)
-        # store element-wise max with next highest score
-        xx1 = torch.clamp(xx1, min=x1[i])
-        yy1 = torch.clamp(yy1, min=y1[i])
-        xx2 = torch.clamp(xx2, max=x2[i])
-        yy2 = torch.clamp(yy2, max=y2[i])
-        w.resize_as_(xx2)
-        h.resize_as_(yy2)
-        w = xx2 - xx1
-        h = yy2 - yy1
-        # check sizes of xx1 and xx2.. after each iteration
-        w = torch.clamp(w, min=0.0)
-        h = torch.clamp(h, min=0.0)
-        inter = w*h
-        # IoU = i / (area(a) + area(b) - i)
-        rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)
-        union = (rem_areas - inter) + area[i]
-        IoU = inter/union  # store result in iou
-        # keep only elements with an IoU <= overlap
-        idx = idx[IoU.le(overlap)]
-    return keep, count
 
 
