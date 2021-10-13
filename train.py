@@ -120,7 +120,7 @@ def train():
             out = net(images)
 
 
-            loss_l, loss_c, loss_landm = criterion(out, priors, targets)
+            loss_l, loss_c, loss_landm = criterion.forward(out, priors, targets)
 
             loss = cfg['loc_weight'] * loss_l + loss_c + loss_landm
             loss /= accumulation_steps
