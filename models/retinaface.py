@@ -69,9 +69,9 @@ class RetinaFace(nn.Layer):
             #     backbone.load_state_dict(new_state_dict)
         elif cfg['name'] == 'Resnet50':
             # import paddle.vision.models as models
-            backbone = resnet50(pretrained=False)
-            param = paddle.load(r'C:\Users\HSN\.cache\paddle\hapi\weights\resnet50.pdparams')
-            backbone.set_dict(param)
+            backbone = resnet50(pretrained=True)
+#             param = paddle.load(r'C:\Users\HSN\.cache\paddle\hapi\weights\resnet50.pdparams')
+#             backbone.set_dict(param)
 
         self.body = backbone
         in_channels_stage2 = cfg['in_channel']
