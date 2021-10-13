@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import os.path
 import sys
@@ -5,6 +6,12 @@ import paddle
 from paddle.io import Dataset
 import cv2
 import numpy as np
+from paddle.vision.transforms import ToTensor
+from PIL import Image
+
+
+import tarfile
+
 
 
 class WiderFaceDetection(Dataset):
@@ -35,11 +42,28 @@ class WiderFaceDetection(Dataset):
 
         self.words.append(labels)
 
-    def __len__(self):
-        return len(self.imgs_path)
+        # 增加多个目标的图片的采样
+        time_choose=3
+        new_words=[]
+        new_imgs_path=[]
+        for index in range(len(self.words)):
+            lbs=self.words[index]
+            nums_lbs=len(lbs)
+            if nums_lbs>30:
+                imgs_path = self.imgs_path[index]
+                for i  in range(time_choose):
+                    new_words.append(lbs)
+                    new_imgs_path.append(imgs_path)
+
+        self.words+=new_words
+        self.imgs_path+=new_imgs_path
+
+
+
+
 
     def __getitem__(self, index):
-        # index = 5336
+        # index = 9475
         # print('index  ',index)
 
         img = cv2.imread(self.imgs_path[index])
@@ -77,22 +101,33 @@ class WiderFaceDetection(Dataset):
         target = np.array(annotations)
         if self.preproc is not None:
             img, target = self.preproc(img, target)
-
+        #
+        # print( 'inside target  ',target)
         # 把数据合并到数据中
-        np_t=np.zeros((1,img.shape[1],img.shape[2]))
+        np_t=np.zeros((1,img.shape[1]*img.shape[0]))
+        max_size=img.shape[1]*img.shape[0]
         num_gt=target.shape[0]
-        np_t[0][0][0]=num_gt
-        for i in range(num_gt):
-            np_t[0][i+1][:15]=target[i]
-        img=np.concatenate([img,np_t],0)
-        return img
-        # img=paddle.ones([1,3,256,256])
-        # target=paddle.ones([1,3,256,256])
-        # return img
-        # img=np.ones([1,3,256,256])
-        # target=np.ones([1,3,256,256])
+        all_gt_num=num_gt*15+5
+        if all_gt_num > max_size:
+            num_gt = num_gt-1
 
-        # return img, target
+        np_t[0][0]=num_gt
+        # print('num ',num_gt)
+        for i in range(num_gt):
+            np_t[:,i*15+1:(i+1)*15+1]=target[i]
+
+        np_t = np.reshape(np_t, (1, img.shape[1],img.shape[0]))
+        image = Image.fromarray(img.astype('uint8'))
+        img = ToTensor()(image)
+        return img,np_t
+
+
+
+    def __len__(self):
+        return len(self.imgs_path)
+
+    def get_spec_index(self,epoch_index):
+        self.epoch_index=epoch_index
 
 def detection_collate(batch):
     """Custom collate fn for dealing with batches of images that have a different
@@ -121,26 +156,3 @@ def detection_collate(batch):
     return imgs
 
 
-def detection_collate1(batch):
-    """Custom collate fn for dealing with batches of images that have a different
-    number of associated object annotations (bounding boxes).
-
-    Arguments:
-        batch: (tuple) A tuple of tensor images and lists of annotations
-
-    Return:
-        A tuple containing:
-            1) (tensor) batch of images stacked on their 0 dim
-            2) (list of tensors) annotations for a given image are stacked on 0 dim
-    """
-    targets = []
-    imgs = []
-    for _, sample in enumerate(batch):
-        for _, tup in enumerate(sample):
-            # if paddle.is_tensor(tup):
-            imgs.append(tup)
-            if isinstance(tup, type(np.empty(0))):
-                # annos = paddle.to_tensor(tup,dtype='float32')
-                targets.append(tup)
-    b=np.concatenate(imgs, 0)
-    return (np.stack(imgs, 0), targets)
