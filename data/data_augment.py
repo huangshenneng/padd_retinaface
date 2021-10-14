@@ -8,6 +8,8 @@ def _crop(image, boxes, labels, landm, img_dim):
     height, width, _ = image.shape
     pad_image_flag = True
 
+    # return image, boxes, labels, landm, pad_image_flag
+
     for _ in range(250):
         """
         if random.uniform(0, 1) <= 0.2:
@@ -204,7 +206,8 @@ def _resize_subtract_mean(image, insize, rgb_mean):
     image = cv2.resize(image, (insize, insize), interpolation=interp_method)
     image = image.astype(np.float32)
     image -= rgb_mean
-    return image.transpose(2, 0, 1)
+    # return image.transpose(2, 0, 1)
+    return image
 
 
 class preproc(object):
@@ -220,7 +223,10 @@ class preproc(object):
         labels = targets[:, -1].copy()
         landm = targets[:, 4:-1].copy()
 
+
         image_t, boxes_t, labels_t, landm_t, pad_image_flag = _crop(image, boxes, labels, landm, self.img_dim)
+        # print('labels_t', labels_t)
+
         image_t = _distort(image_t)
         image_t = _pad_to_square(image_t,self.rgb_means, pad_image_flag)
         image_t, boxes_t, landm_t = _mirror(image_t, boxes_t, landm_t)
