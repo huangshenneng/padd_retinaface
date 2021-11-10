@@ -7,7 +7,8 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 
 
 ##代码结构
-'''
+
+```
 /Paddle_Retinaface
 |-- data
 |   |-- widerface（训练数据）
@@ -41,7 +42,7 @@ Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https
 |       |-- setup.py
 |-- train.py（训练）
 |-- test_widerface.py （测试）
-'''
+```
 
 # 准备工作
 ```
