@@ -1,7 +1,43 @@
 # padd_retinaface
 
 
+
 Paddle复现 RetinaFace: Single-stage Dense Face Localisation in the Wild  https://arxiv.org/pdf/1905.00641v2.pdf )  论文
+
+##代码结构
+/Paddle_Retinaface
+|-- data
+|   |-- widerface（训练数据）
+|      |-- train
+|          |-- images
+|          |-- label.txt
+|      |-- test
+|          |-- images
+|          |-- label.txt
+|      |-- val
+|          |-- images
+|          |-- label.txt
+|          |-- wider_val.txt
+|   |-- config.py （超参数设置）
+|   |-- data_augment.py （数据增强）
+|   |-- wider_face.py （数据加载类）
+|--functions
+|       |-- prior_box.py （先验框设置）
+|-- modules
+|       |-- multibox_loss.py（损失函数）
+|-- models
+|       |-- net.py
+|       |-- resnet.py
+|       |-- retinaface.py（网络定义）
+|-- utils
+|       |-- nms
+|           |-- py_cpu_nms.py
+|       |-- box_utils.py
+|-- widerface_evaluate          
+|       |-- evaluation.py
+|       |-- setup.py
+|-- train.py（训练）
+|-- test_widerface.py （测试）
 
 # 准备工作
 ```
